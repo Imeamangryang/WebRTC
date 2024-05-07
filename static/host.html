@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Host</title>
+    <link rel="stylesheet" href="main.css">
+</head>
+
+<body>
+    <div>
+        <input value="2019102103">
+        <button onclick="register(this.previousElementSibling.value)">Start streaming</button>
+        <div class="videoContainer">
+            <video id="videoPreview" muted></video>
+        </div>
+
+        <div>Advanced settings:</div>
+        Resolution (pixels height): <input id="resolution" type="number" value="800">
+        <br>
+        Framerate (fps): <input id="fps" type="number" value="60">
+        <br>
+        Bitrate (Kbps): <input id="bitrate" type="number" value="20000">
+        <br>
+
+        <br>
+        <div id="console"></div>
+    </div>
+
+    <script src="main.js"></script>
+    <script>
+        async function register(name) {
+            // start local video
+            //
+            try {
+                var stream = await navigator.mediaDevices.getDisplayMedia(
+                    {
+                        video: true,
+                        //{
+                        //    displaySurface: "monitor",
+                        //    height: parseInt(document.getElementById('resolution').value),
+                        //    frameRate: parseInt(document.getElementById('fps').value),
+                        //},
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            suppressLocalAudioPlayback: false,
+                        },
+                    }
+                );
+            } catch (error) {
+                printMsg(`Error accessing screen: ${error}`, 'error');
+                return
+            }
+
+            playVideo(stream)
+
+            // register on server
+            initSignal(name, 'host')
+        }
+
+        // init RTCPeerConnection
+        //
+        function startPeer() {
+            printMsg('Received request to start peer connection', 'success')
+            initPeerConnection()
+            // add video track
+            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+        }
+
+        printMsg('Hello from host!')
+        if (window.location.protocol == 'http:') {
+            printMsg('Screen sharing is not available over HTTP, please use HTTPS instead', 'error')
+        }
+    </script>
+</body>
+
+</html>

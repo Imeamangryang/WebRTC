@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client</title>
+    <link rel="stylesheet" href="main.css">
+    <script defer src="http://localhost:3000/src/main.js"></script>
+</head>
+
+<body>
+    <div>
+        <input value="2019102103">
+        <button onclick="register(this.previousElementSibling.value)">Start streaming</button>
+        <div class="videoContainer">
+            origin video Stream:               
+            <div id="canvas-container">
+                <video id="videoPreview" controls></video>
+            </div>
+            <br>
+            <div id="horizontal-container">
+                <div id="vertical-container">
+                    degraded video:
+                    <canvas id="canvas"></canvas>
+                </div>
+                
+                &emsp;
+                
+                <div id="vertical-container">
+                    Processed video:
+                    <canvas id="sr_video"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="img-comp-container">
+            <div class="img-comp-img">
+              <canvas2 id="canvas"></canvas>
+            </div>
+            <div class="img-comp-img img-comp-overlay">
+              <canvas2 id="sr_video"></canvas>
+            </div>
+          </div>
+        
+        Preferred codec:
+        <select id="codec">
+            <option selected value="">Default</option>
+        </select>
+        <br>
+        <br>
+
+        <div id="console"></div>
+    </div>
+    
+    <script src="http://localhost:3000/src/main.js"></script>
+    <script>
+        function register(name) {
+            // register on server
+            common.initSignal(name, 'client')
+        }
+
+        // init RTCPeerConnection
+        //
+        function startPeer() {
+            common.printMsg('Received request to start peer connection', 'success')
+            common.initPeerConnection()
+            // listen for video track
+            peerConnection.ontrack = (e) => {
+                common.playVideo(e.streams[0])
+            }
+        }
+
+        const videoEl = document.getElementById('videoPreview');
+
+        videoEl.onloadeddata = function() {
+            common.printMsg(`Video loaded: ${videoEl.videoWidth}x${videoEl.videoHeight}`, 'success');
+            common.printPeerCodec();
+            common.drawVideoOnCanvas();
+        };
+
+
+        common.getRecvCodec()
+
+        common.printMsg('Hello from client!')
+
+        common.initComparisons();
+    </script>
+</body>
+
+</html>

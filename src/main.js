@@ -1,4 +1,4 @@
-//import WebSR from "@websr/websr"
+import WebSR from "@websr/websr"
 
 // STUN server
 //
@@ -11,7 +11,7 @@ const consoleEl = document.getElementById('console')
 const videoEl = document.getElementById('videoPreview')
 const codecPreferences = document.getElementById('codec')
 
-function printMsg(msg, type = null) {
+export function printMsg(msg, type = null) {
     var msgEl = document.createElement('p')
     if (typeof (msg) != 'string') {
         msgEl.innerText = JSON.stringify(msg, null, 2)
@@ -23,38 +23,42 @@ function printMsg(msg, type = null) {
     consoleEl.scrollTop = consoleEl.scrollHeight
 }
 
-async function drawVideoOnCanvas() {
+export async function drawVideoOnCanvas() {
     // 비디오의 너비 및 높이를 캔버스에 맞게 설정
+    const dpr = window.devicePixelRatio;
+
     const canvas = document.getElementById('canvas')
-    canvas.width = videoEl.clientWidth * 2;
-    canvas.height = videoEl.clientHeight * 2;
+    canvas.width = videoEl.clientWidth * dpr;
+    canvas.height = videoEl.clientHeight * dpr;
 
     const srcanvas = document.getElementById('sr_video')
-    srcanvas.width = videoEl.clientWidth * 2;
-    srcanvas.height = videoEl.clientHeight * 2;
+    srcanvas.width = videoEl.clientWidth * dpr;
+    srcanvas.height = videoEl.clientHeight * dpr;
 
-    // const gpu = await initWebGPU();
-    // if(!gpu) printMsg("Browser/device doesn't support WebGPU");
+    const gpu = await WebSR.initWebGPU();
+    if(!gpu) printMsg("Browser/device doesn't support WebGPU");
     
-    // const websr = new WebSR({
-    //     source: videoEl,
-    //     network_name: "anime4k/cnn-2x-s",
-    //     weights: await (await fetch('./cnn-2x-s.json')).json(), //found in weights/anime4k folder
-    //     gpu,
-    //     canvas: srcanvas
-    // });
+    const websr = new WebSR({
+        source: videoEl,
+        network_name: "anime4k/cnn-2x-l",
+        weights: await (await fetch('./cnn-2x-l.json')).json(), //found in weights/anime4k folder
+        gpu,
+        canvas: srcanvas
+    });
 
-    // await websr.start();
+    await websr.start();
 
     // 캔버스 컨텍스트 가져오기
     const ctx = canvas.getContext('2d');
-    const srctx = srcanvas.getContext('2d');
 
     // 캔버스에 비디오 프레임을 그리는 루프 설정
     function drawFrame() {
         // 비디오 프레임을 캔버스에 그림
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
         ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-        srctx.drawImage(videoEl, 0, 0, srcanvas.width, srcanvas.height);
+        // ctx.drawImage(canvas, 0, 0, canvas.width * 0.5, canvas.height * 0.5);
+        // ctx.drawImage(canvas, 0, 0, canvas.width * 0.5, canvas.height * 0.5, 0, 0, srcanvas.width, srcanvas.height);
 
         // 다음 프레임을 그리기 위해 requestAnimationFrame 호출
         requestAnimationFrame(drawFrame);
@@ -64,7 +68,84 @@ async function drawVideoOnCanvas() {
     drawFrame();
 }
 
-function playVideo(stream) {
+export function initComparisons() {
+    var x, i;
+    /* Find all elements with an "overlay" class: */
+    x = document.getElementsByClassName("img-comp-overlay");
+    for (i = 0; i < x.length; i++) {
+      /* Once for each "overlay" element:
+      pass the "overlay" element as a parameter when executing the compareImages function: */
+      compareImages(x[i]);
+    }
+    function compareImages(img) {
+      var slider, img, clicked = 0, w, h;
+      /* Get the width and height of the img element */
+      w = img.offsetWidth;
+      h = img.offsetHeight;
+      /* Set the width of the img element to 50%: */
+      img.style.width = (w / 2) + "px";
+      /* Create slider: */
+      slider = document.createElement("DIV");
+      slider.setAttribute("class", "img-comp-slider");
+      /* Insert slider */
+      img.parentElement.insertBefore(slider, img);
+      /* Position the slider in the middle: */
+      slider.style.top = (h / 2) - (slider.offsetHeight / 2) + "px";
+      slider.style.left = (w / 2) - (slider.offsetWidth / 2) + "px";
+      /* Execute a function when the mouse button is pressed: */
+      slider.addEventListener("mousedown", slideReady);
+      /* And another function when the mouse button is released: */
+      window.addEventListener("mouseup", slideFinish);
+      /* Or touched (for touch screens: */
+      slider.addEventListener("touchstart", slideReady);
+       /* And released (for touch screens: */
+      window.addEventListener("touchend", slideFinish);
+      function slideReady(e) {
+        /* Prevent any other actions that may occur when moving over the image: */
+        e.preventDefault();
+        /* The slider is now clicked and ready to move: */
+        clicked = 1;
+        /* Execute a function when the slider is moved: */
+        window.addEventListener("mousemove", slideMove);
+        window.addEventListener("touchmove", slideMove);
+      }
+      function slideFinish() {
+        /* The slider is no longer clicked: */
+        clicked = 0;
+      }
+      function slideMove(e) {
+        var pos;
+        /* If the slider is no longer clicked, exit this function: */
+        if (clicked == 0) return false;
+        /* Get the cursor's x position: */
+        pos = getCursorPos(e)
+        /* Prevent the slider from being positioned outside the image: */
+        if (pos < 0) pos = 0;
+        if (pos > w) pos = w;
+        /* Execute a function that will resize the overlay image according to the cursor: */
+        slide(pos);
+      }
+      function getCursorPos(e) {
+        var a, x = 0;
+        e = (e.changedTouches) ? e.changedTouches[0] : e;
+        /* Get the x positions of the image: */
+        a = img.getBoundingClientRect();
+        /* Calculate the cursor's x coordinate, relative to the image: */
+        x = e.pageX - a.left;
+        /* Consider any page scrolling: */
+        x = x - window.pageXOffset;
+        return x;
+      }
+      function slide(x) {
+        /* Resize the image: */
+        img.style.width = x + "px";
+        /* Position the slider: */
+        slider.style.left = img.offsetWidth - (slider.offsetWidth / 2) + "px";
+      }
+    }
+  }
+
+export function playVideo(stream) {
     if (videoEl.srcObject === stream) return
 
     videoEl.srcObject = stream;
@@ -92,12 +173,12 @@ consoleEl.onclick = (e) => {
 
 // WebSocket
 //
-function getWsAddress() {
+export function getWsAddress() {
     var l = window.location;
     return ((l.protocol == "https:") ? "wss://" : "ws://") + l.host
 }
 
-function initSignal(name, type) {
+export function initSignal(name, type) {
     var socket = new WebSocket(`${getWsAddress()}/signal?name=${name}&type=${type}`);
     if (window.socket) {
         if (window.socket.readyState == WebSocket.CONNECTING) {
@@ -116,7 +197,7 @@ function initSignal(name, type) {
 
     socket.onmessage = (e) => {
         try {
-            msg = JSON.parse(e.data)
+            var msg = JSON.parse(e.data)
 
             if (msg.type == 'start') {
                 startPeer()
@@ -158,7 +239,7 @@ setInterval(() => {
 
 // RTC event handlers
 //
-function initPeerConnection() {
+export function initPeerConnection() {
     printMsg("Initiating peer connection")
     try {
         var peerConnection = new RTCPeerConnection({
@@ -207,7 +288,7 @@ function initPeerConnection() {
     }
 }
 
-async function onReceiveSDPOffer(sdp) {
+export async function onReceiveSDPOffer(sdp) {
     printMsg('Received SDP offer:', 'success')
     printMsg(sdp, 'success')
     await peerConnection.setRemoteDescription(sdp);
@@ -227,7 +308,7 @@ async function onReceiveSDPOffer(sdp) {
     printMsg('SDP answer sent')
 }
 
-async function onReceiveSDPAnswer(sdp) {
+export async function onReceiveSDPAnswer(sdp) {
     printMsg('Received SDP answer:', 'success')
     printMsg(sdp, 'success')
 
@@ -241,7 +322,7 @@ async function onReceiveSDPAnswer(sdp) {
     printPeerCodec()
 }
 
-function onReceiveICECandidate(candidate) {
+export function onReceiveICECandidate(candidate) {
     printMsg('Received remote ICE candidate:', 'success')
     printMsg(candidate, 'success')
     peerConnection.addIceCandidate(candidate)
@@ -250,7 +331,7 @@ function onReceiveICECandidate(candidate) {
 
 // Misc
 //
-function printPeerCodec() {
+export function printPeerCodec() {
     peerConnection.getStats().then((stats) => {
         stats.forEach((stat) => {
             if (stat.type == 'codec') {
@@ -260,7 +341,7 @@ function printPeerCodec() {
     })
 }
 
-function getRecvCodec() {
+export function getRecvCodec() {
     const { codecs } = RTCRtpReceiver.getCapabilities('video');
     codecs.forEach(codec => {
         if (['video/red', 'video/ulpfec', 'video/rtx'].includes(codec.mimeType)) {
@@ -276,7 +357,7 @@ function getRecvCodec() {
     codecPreferences.disabled = false;
 }
 
-function setRecvCodec() {
+export function setRecvCodec() {
     try {
         const preferredCodec = codecPreferences.value
         if (preferredCodec !== '') {

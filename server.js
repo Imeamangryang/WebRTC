@@ -1,18 +1,21 @@
-// import express from 'express';
-// import expressWs from 'express-ws';
-// import http from 'http';
-// import stun from 'stun';
 const express = require('express');
 const expressWs = require('express-ws');
 const http = require('http');
 const path = require('path');
 const stun = require('stun');
 
-// init http(s) server
+const webpackDevMiddleware = require('webpack-dev-middleware');
+const webpack = require('webpack');
+const webpackConfig = require('./webpack.config.js');
+const compiler = webpack(webpackConfig)
+
+// init http server
 //
 const app = express();
-app.use(express.static('static'));
-app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')))
+app.use(express.static('src'));
+app.use(webpackDevMiddleware(compiler,{
+	publicPath: webpackConfig.output.publicPath,
+ }))
 
 const httpServer = http.createServer(app);
 
